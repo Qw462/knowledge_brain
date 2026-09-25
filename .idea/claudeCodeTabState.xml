@@ -8,7 +8,7 @@
             <TabSessionState>
               <option name="provider" value="claude" />
               <option name="cwd" value="E:\python\knowledge_brain" />
-              <option name="model" value="claude-sonnet-5" />
+              <option name="model" value="claude-sonnet-5[1m]" />
               <option name="permissionMode" value="default" />
             </TabSessionState>
           </value>

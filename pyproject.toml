@@ -26,6 +26,8 @@ dependencies = [
     "modelscope>=1.39.1",
     "openai-agents>=0.22.0",
     "dashscope>=1.27.4",
+    "ragas==0.3.9",
+    "langchain-community==0.4.2",
 ]
 [tool.uv.sources]
 # 强制从 NVIDIA 源安装

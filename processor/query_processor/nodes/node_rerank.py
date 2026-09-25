@@ -11,7 +11,7 @@ from utils.reranker_http_utils import rerank_documents
 # Rerank / TopK 全局常量
 # -----------------------------
 # 动态 TopK 硬上限：最多取前 N 条（<=10）
-RERANK_MAX_TOPK: int = 5
+RERANK_MAX_TOPK: int = 8
 # 最小 TopK：至少保留前 N 条（>=1，且 <= RERANK_MAX_TOPK）
 RERANK_MIN_TOPK: int = 2 #总数最少条数
 
