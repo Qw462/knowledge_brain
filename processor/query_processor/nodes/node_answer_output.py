@@ -27,12 +27,12 @@ class NodeAnswerOutput(NodeBase):
     def process(self, state: QueryGraphState) -> QueryGraphState:
         """
         1 判断state 中的answer是否已经存在，如果存在直接输出answer中的答案，注意判断是否需要流式输出需要则流式输出
-        2 根据state中的问题、重新问题、历史对话、提问商品（item_names）、 重排内容 组织prompt 并调用llm 生成答案
+        2 根据state中的问题、重新问题、历史对话、提问景点（item_names）、 重排内容 组织prompt 并调用llm 生成答案
         3 调用大模型输出答案 注意判断是否需要流式输出需要则流式输出
         4 把答案写入到mongodb的history中 利用utils/mongo_history_utils.py中的save_chat_message方法
         5 做最后一次push操作（主要是为了触发前端图片渲染)
              {
-                "answer": "HAK 180 烫金机的操作面板位于...（大模型生成的纯文本）...",
+                "answer": "龙门石窟位于洛阳市洛龙区...（大模型生成的纯文本）...",
                 "status": "completed",
                 "image_urls": [
                     "http://local-server/images/panel_view.jpg",
@@ -100,11 +100,11 @@ class NodeAnswerOutput(NodeBase):
 
         """
         阶段二：构建 Prompt
-        根据state中的问题、重新问题、历史对话、提问商品（item_names）、 重排内容 组装 LLM 提示词
+        根据state中的问题、重新问题、历史对话、提问景点（item_names）、 重排内容 组装 LLM 提示词
         """
         char_budget = MAX_CONTEXT_CHARS
 
-        # 1. 获取问题和商品名
+        # 1. 获取问题和景点名
         # 优先使用重写后的问题
         question = state.get("rewritten_query") or state.get("original_query", "")
         item_names = state["item_names"]
@@ -119,8 +119,8 @@ class NodeAnswerOutput(NodeBase):
             state.get("history") or [], char_budget
         )
 
-        # 4. 格式化 Item Names (提问商品)
-        item_names_str = ", ".join(item_names) if item_names else "无指定商品"
+        # 4. 格式化 Item Names (提问景点)
+        item_names_str = ", ".join(item_names) if item_names else "无指定景点"
 
         # 5. 组装提示词
         prompt = ANSWER_PROMPT.format(
@@ -354,50 +354,50 @@ if __name__ == "__main__":
         {
             "chunk_id": "local_101",
             "source": "local",
-            "title": "HAK 180 烫金机操作手册_v2",
+            "title": "河南博物院参观指南_v2",
             "score": 0.95,
             "url": None,
             "content": """
-HAK 180 烫金机的操作面板位于机器正前方。
-开启电源后，您需要先设置温度，默认建议设置在 110℃ 左右。
-具体的操作面板布局请参考下图：
-![操作面板布局图](http://192.168.100.100:9000/knowledge-base/upload-images/hak180产品安全手册/048c005b198be5c9fff80ad6a6ba02496f38fa109ec20dbaabde3110f3eb1574.jpg)
+河南博物院的主展馆位于农业路中段。
+入馆前需提前预约，默认建议提前 1-3 天在官方公众号完成实名预约。
+具体的展馆布局请参考下图：
+![主展馆布局图](http://192.168.60.60:9000/henan-travel/upload-images/河南博物院/048c005b198be5c9fff80ad6a6ba02496f38fa109ec20dbaabde3110f3eb1574.jpg)
 
-如果是进行局部烫金，请调节侧面的旋钮。
-![侧面旋钮细节](http://192.168.100.100:9000/knowledge-base/upload-images/hak180产品安全手册/f77da4df52517fc50b9efb528540e1351dd1a08dce6f801cf08366540f2c59ce.jpg)
+如果是参观镇院之宝，请前往二楼展厅。
+![莲鹤方壶展柜细节](http://192.168.60.60:9000/henan-travel/upload-images/河南博物院/f77da4df52517fc50b9efb528540e1351dd1a08dce6f801cf08366540f2c59ce.jpg)
 """
         },
         {
             "chunk_id": None,
             "source": "web",
-            "title": "HAK 180 常见故障排除 - 官网",
+            "title": "河南博物院 常见参观问题 - 官网",
             "score": 0.88,
-            "url": "http://192.168.100.100:9000/knowledge-base/upload-images/%E5%8D%8E%E4%B8%BA%E6%93%8E%E4%BA%91G740%E7%94%A8%E6%88%B7%E6%8C%87%E5%8D%97-(KLVG-16Z,Windows11_02,zh-cn)/c28a751c315a89fb5f3b52736a7996b56971c9a260a0e2b850eb5ef18beabf3c.jpg",  # 这是一个直接指向图片的URL（虽然少见，但用于测试提取）
-            "content": "如果机器无法加热，请检查保险丝是否熔断..."
+            "url": "http://192.168.60.60:9000/henan-travel/upload-images/%E6%B2%B3%E5%8D%97%E5%8D%9A%E7%89%A9%E9%99%A2/c28a751c315a89fb5f3b52736a7996b56971c9a260a0e2b850eb5ef18beabf3c.jpg",  # 这是一个直接指向图片的URL（虽然少见，但用于测试提取）
+            "content": "如果预约名额已满，可尝试选择工作日时段入馆..."
         },
         {
             "chunk_id": "local_102",
             "source": "local",
-            "title": "安全注意事项",
+            "title": "参观注意事项",
             "score": 0.82,
             "url": None,
-            "content": "操作时请务必佩戴隔热手套，避免高温烫伤。"
+            "content": "参观时请遵守展馆规定，不要触摸展品，注意保护文物。"
         }
     ]
 
     # 模拟历史记录
     mock_history = [
-        {"role": "user", "text": "你好，这款机器怎么用？"},
-        {"role": "assistant", "text": "您好！请问您具体指的是哪一款机器？"},
-        {"role": "user", "text": "HAK 180 烫金机"}
+        {"role": "user", "text": "你好，这个景点怎么玩？"},
+        {"role": "assistant", "text": "您好！请问您具体指的是哪个景点？"},
+        {"role": "user", "text": "河南博物院"}
     ]
 
     # 模拟输入状态
     mock_state = {
         "session_id": "test_answer_session_001",
-        "original_query": "HAK 180 烫金机怎么操作？",
-        "rewritten_query": "HAK 180 烫金机的具体操作步骤和面板设置方法",
-        "item_names": ["HAK180烫金机"],
+        "original_query": "河南博物院怎么参观？",
+        "rewritten_query": "河南博物院的预约方式和参观路线",
+        "item_names": ["河南博物院"],
         "history": mock_history,
         "reranked_docs": mock_reranked_docs,
         "is_stream": False,  # 测试非流式

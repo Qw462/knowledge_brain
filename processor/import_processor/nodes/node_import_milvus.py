@@ -128,7 +128,7 @@ class NodeImportMilvus(BaseNode):
         schema.add_field(field_name="parent_title", datatype=DataType.VARCHAR, max_length=100)  # 父标题
         schema.add_field(field_name="part", datatype=DataType.INT8)  # 分片编号
         schema.add_field(field_name="file_title", datatype=DataType.VARCHAR, max_length=100)  # 源文件标题
-        schema.add_field(field_name="item_name", datatype=DataType.VARCHAR, max_length=100)  # 商品名称（幂等性依据）
+        schema.add_field(field_name="item_name", datatype=DataType.VARCHAR, max_length=100)  # 景点名称（幂等性依据）
         schema.add_field(field_name="sparse_vector", datatype=DataType.SPARSE_FLOAT_VECTOR)  # 稀疏向量
         schema.add_field(field_name="dense_vector", datatype=DataType.FLOAT_VECTOR, dim=vector_dimension)  # 稠密向量
 
@@ -211,7 +211,8 @@ class NodeImportMilvus(BaseNode):
 if __name__ == "__main__":
     setup_logging()
 
-    json_path=r"D:\项目\output\hak180产品安全手册\state_vector.json"
+    #读取node_bge_embedding自测生成的state_vector.json备份
+    json_path=r"D:\旅游数据集\tourism_docs\state_vector.json"
     with open(json_path,"r",encoding="utf-8") as f:
         state_json=f.read()
     state=json.loads(state_json)

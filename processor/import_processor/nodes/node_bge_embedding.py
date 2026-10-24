@@ -71,7 +71,7 @@ class NodeBGEEmbedding(BaseNode):
                 步骤 2: 批量生成向量（核心业务逻辑）
                 核心逻辑：
                     1. 分批处理：避免一次性处理过多数据导致显存溢出（OOM）。
-                    2. 文本构造：将 item_name 和 content 拼接，增强语义（商品名作为核心特征前置）。
+                    2. 文本构造：将 item_name 和 content 拼接，增强语义（景点名作为核心特征前置）。
                     3. 向量生成：调用模型批量生成 Dense（稠密）和 Sparse（稀疏）向量。
                 参数：
                     chunks: List[Dict] 待向量化的文本切片列表
@@ -102,12 +102,11 @@ if __name__ == "__main__":
 
     setup_logging()
 
-    json_path=r"D:\项目\output\hak180产品安全手册\state.json"
+    #读取node_item_name_recognition自测生成的state.json备份（chunks已带item_name）
+    json_path=r"D:\旅游数据集\tourism_docs\state.json"
 
     with open(json_path,"r",encoding="utf-8") as f:
-        state_json=f.read()
-
-    state=json.loads(state_json)
+        state=json.loads(f.read())
 
     init_state={
         "chunks":state.get("chunks")
@@ -116,6 +115,11 @@ if __name__ == "__main__":
     #执行核心处理流程
     node_bge_embedding=NodeBGEEmbedding()
     result=node_bge_embedding(init_state)
+
+    #备份向量化后的state，供node_import_milvus自测读取
+    vector_backup_path=r"D:\旅游数据集\tourism_docs\state_vector.json"
+    with open(vector_backup_path,"w",encoding="utf-8") as f:
+        json.dump(result,f,ensure_ascii=False,indent=4)
 
     logging.getLogger().info(json.dumps(result,ensure_ascii=False,indent=4))
 

@@ -83,7 +83,7 @@ def save_chat_message(
     :param role: 消息角色，固定值：user（用户）/assistant（助手）
     :param text: 对话核心内容，用户的提问或助手的回答
     :param rewritten_query: 重写后的查询语句（可选，用于检索增强等场景，默认空字符串）
-    :param item_names: 关联的商品名称列表（可选，支持多商品，默认None）
+    :param item_names: 关联的景点名称列表（可选，支持多景点，默认None）
     :param image_urls: 关联的图片URL列表（可选，默认None）
     :param message_id: 记录主键ID（可选，有值则更新，无值则新增）
     :return: 插入/更新的记录唯一标识（新增返回ObjectId字符串，更新返回传入的message_id）
@@ -97,7 +97,7 @@ def save_chat_message(
         "role": role,  # 消息角色
         "text": text,  # 消息内容
         "rewritten_query": rewritten_query or "",  # 问题优化后的改写，空值处理为空字符串
-        "item_names": item_names,  # 关联商品名称列表
+        "item_names": item_names,  # 关联景点名称列表
         "image_urls": image_urls,  # 关联图片URL列表
         "ts": ts  # 时间戳，排序和时间筛选维度
     }
@@ -122,9 +122,9 @@ def save_chat_message(
 
 def update_message_item_names(ids: List[str], item_names: List[str]) -> int:
     """
-    批量更新历史会话记录的关联商品名称
+    批量更新历史会话记录的关联景点名称
     :param ids: 要更新的记录主键ID列表（字符串类型）
-    :param item_names: 要设置的新商品名称列表
+    :param item_names: 要设置的新景点名称列表
     :return: 实际更新的文档数量，更新失败返回0
     """
     # 获取全局的HistoryMongoTool实例，使用单例模式
@@ -138,9 +138,9 @@ def update_message_item_names(ids: List[str], item_names: List[str]) -> int:
             {
                 "_id": {"$in": object_ids}# 主键在指定的ID列表中（批量筛选）
             },
-            {"$set": {"item_names": item_names}}  # 更新操作：设置新的商品名称列表
+            {"$set": {"item_names": item_names}}  # 更新操作：设置新的景点名称列表
         )
-        # 记录更新成功日志，包含更新数量和新的商品名称
+        # 记录更新成功日志，包含更新数量和新的景点名称
         logging.info(f"Updated {result.modified_count} records to item_names: {item_names}")
         # 返回实际更新的数量（modified_count：真正被修改的文档数，区别于matched_count）
         return result.modified_count
@@ -205,15 +205,15 @@ def clear_history(session_id: str) -> int:
 if __name__ == "__main__":
     # # 测试代码
     # save_chat_message(
-    #     "test_session_id_001", "user", "请问这个怎么用？", "请问HAK180烫金机如何使用？"
+    #     "test_session_id_001", "user", "请问这个怎么参观？", "请问河南博物院如何预约参观？"
     # )
 
-    # 测试会话，用于确认商品名称是否能正确的提取
+    # 测试会话，用于确认景点名称是否能正确的提取
     sid = "test_session_002"
     # 1. 写入用户消息
-    save_chat_message(sid, "user", "你好，有烫金机吗？")
+    save_chat_message(sid, "user", "你好，有景点介绍吗？")
     # 2. 写入助手回复
-    save_chat_message(sid, "assistant", "你好！请问你想询问哪个型号？")
-    # 3. 写入带关联商品的用户消息
-    save_chat_message(sid, "user", "brother的HAK180烫金机")
+    save_chat_message(sid, "assistant", "你好！请问你想了解哪个景点？")
+    # 3. 写入带关联景点的用户消息
+    save_chat_message(sid, "user", "郑州的河南博物院")
     save_chat_message(sid, "assistant", "有的")

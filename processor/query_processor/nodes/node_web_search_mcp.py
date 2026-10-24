@@ -66,7 +66,7 @@ class NodeWebSearchMcp(NodeBase):
 if __name__ == "__main__":
 
     init_state = {
-        "rewritten_query": "关于HAK180烫金机，如何调节转印温度？"
+        "rewritten_query": "河南博物院 开放时间 预约参观"
     }
 
     # 执行节点的业务调用

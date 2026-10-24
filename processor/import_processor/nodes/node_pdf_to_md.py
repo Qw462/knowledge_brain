@@ -238,8 +238,9 @@ if __name__ == "__main__":
     setup_logging()
 
     init_state={
-        "pdf_path":r"D:\项目\doc\Aolynk CB304n Cable网桥 用户手册-5W100-整本手册.pdf",
-        "file_dir":r"D:\项目\output"
+        #PDF版样例需自备：与md同名放到以下路径；没有PDF则该自测不可运行（依赖MinerU服务）
+        "pdf_path":r"D:\旅游数据集\tourism_docs\河南博物院.pdf",
+        "file_dir":r"D:\旅游数据集\tourism_docs"
     }
     node_pdf_to_md=NodePDFToMD()
     # 使用 对象() 的方式相当于调用了 对象的__call__()

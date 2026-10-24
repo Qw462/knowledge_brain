@@ -48,13 +48,13 @@ class NodeItemNameConfirm(NodeBase):
         #更新状态
         state["rewritten_query"]=rewritten_query
         state["item_names"]=item_names
-        #5 & 6 如果有提取到商品名称，进行搜索和对齐
+        #5 & 6 如果有提取到景点名称，进行搜索和对齐
         align_result={}
         if len(item_names)>0:
             query_results=self._step_5_vectorize_and_query(item_names)
             align_result = self._step_6_align_item_names(query_results)
         else:
-            logger.info("Node:未提取到商品名，跳过向量搜索")
+            logger.info("Node:未提取到景点名，跳过向量搜索")
 
         #7 检查确认状态
         state = self._step_7_check_confirmation(state, align_result, history)
@@ -80,15 +80,15 @@ class NodeItemNameConfirm(NodeBase):
 
     def _step_4_extract_info(self, original_query,history):
         """
-        利用LLM从当前问题以及历史会话中提取出主要询问的商品名称item_names（可多个，JSON列表形式）
-        若商品名不够明确则返回空列表，同时根据上下文重新改写问题，保证问题独立完整
+        利用LLM从当前问题以及历史会话中提取出主要询问的景点名称item_names（可多个，JSON列表形式）
+        若景点名不够明确则返回空列表，同时根据上下文重新改写问题，保证问题独立完整
         :param query: 字符串 - 用户当前原始查询问题（如："这个多少钱？"）
         :param history: 列表[字典] - 近期会话历史，每条消息含role/text等字段，
                        格式：[{"role": "user/assistant", "text": "消息内容", "_id": "消息ID"}, ...]
         :return: 字典 - 提取结果，固定包含2个字段，格式：
                 {
-                    "item_names": ["商品名1", "商品名2", ...],  # 提取的商品名列表，无则空列表
-                    "rewritten_query": "改写后的完整问题"       # 包含商品名的独立问题，无则返回原始query
+                    "item_names": ["景点名1", "景点名2", ...],  # 提取的景点名列表，无则空列表
+                    "rewritten_query": "改写后的完整问题"       # 包含景点名的独立问题，无则返回原始query
                 }
         """
         try:
@@ -121,7 +121,7 @@ class NodeItemNameConfirm(NodeBase):
             #4 调用模型
             response=chant_model.invoke(messages)
             content=response.content
-            #5 数据清洗：去掉可能的围栏代码（```json和```）
+            #5 数据清洗：去掉可能的围栏代码（``json和```）
             if content.startswith("```json"):
                 content=content.replace("```json","").replace("```","")
             #6 json数据的解析（将json字符串转换为字典）
@@ -144,22 +144,22 @@ class NodeItemNameConfirm(NodeBase):
             return result
         except Exception as e:
             #捕获所有异常（大模型调用失败，json解析失败等），记录错误日志
-            logger.error(f"大模型带哦用异常{e}")
-            #异常时返回默认结果,空商品名列表+原始查询
+            logger.error(f"大模型调用异常{e}")
+            #异常时返回默认结果,空景点名列表+原始查询
             return {"item_names":[],"rewritten_query":None}
 
 
     def _step_5_vectorize_and_query(self, item_names) -> List[Dict]:
         """
            把分析出的item_names逐个向量化（BGEM3模型），并在Milvus向量数据库(kb_item_names)中执行混合搜索，获取匹配评分
-           :param item_names: 列表[字符串] - 步骤4中 提取的商品名列表（如["苹果15", "华为P60"]）
+           :param item_names: 列表[字符串] - 步骤4中 提取的景点名列表（如["少林寺", "龙门石窟"]）
            :return: 列表[字典] - 格式：
                 [
                     {
-                        "extracted_name": "提取的原始商品名",  # 如"苹果15"
-                        "matches": [                          # 该商品名的TopN匹配结果，无则空列表
+                        "extracted_name": "提取的原始景点名",  # 如"少林寺"
+                        "matches": [                          # 该景点名的TopN匹配结果，无则空列表
                             {
-                                "item_name": "数据库中的商品名",  # Milvus中存储的标准化商品名
+                                "item_name": "数据库中的景点名",  # Milvus中存储的标准化景点名
                                 "score": 0.98                  # 混合搜索的相似度评分（0-1，越高越相似）
                             },
                             ...
@@ -168,7 +168,7 @@ class NodeItemNameConfirm(NodeBase):
                     ...
                 ]
         """
-        #1 将商品名进行向量化处理
+        #1 将景点名进行向量化处理
         embeddings=generate_embeddings(item_names)
         try:
             #获取milvus客户端
@@ -184,7 +184,7 @@ class NodeItemNameConfirm(NodeBase):
             #4 获取milvus中集合的名字
             collection_name=milvus_config.item_name_collection
 
-            #5 遍历item_name中的每个商品名称
+            #5 遍历item_name中的每个景点名称
             for i in range(len(item_names)):
                 dense_vector=embeddings.get("dense")[i]
                 sparse_vector=embeddings.get("sparse")[i]
@@ -222,21 +222,21 @@ class NodeItemNameConfirm(NodeBase):
 
     def _step_6_align_item_names(self, query_results) -> dict:
         """
-        6 根据Milvus搜索评分，逐个对齐step4提取的item_names，生成「确认商品名」和「候选商品名」以及 [没有可选商品]
+        6 根据Milvus搜索评分，逐个对齐step4提取的item_names，生成「确认景点名」和「候选景点名」以及 [没有可选景点]
         对齐规则（优先级a>b>c>d）：
-                #a  如果只有一个匹配结果评分高于0.85 → 直接确认该商品名
+                #a  如果只有一个匹配结果评分高于0.85 → 直接确认该景点名
                 #b  如果多条匹配结果评分超过0.85 → 优先取与原始提取名相同的，无则取分数最高的
                 优化ab 所有评分高于0.85的都直接确认
                 c  如果无0.85分以上结果 → 取分数≥0.6的最高前5个作为候选
-                d  如果无0.6分及以上结果 → 不返回任何商品名（确认+候选均为空）
-        :param query_results: 列表[字典] - step5的返回结果，每个商品名的搜索匹配数据（格式同step5返回值）
-        :return: 字典 - 商品名对齐结果，包含确认列表和候选列表，格式：
+                d  如果无0.6分及以上结果 → 不返回任何景点名（确认+候选均为空）
+        :param query_results: 列表[字典] - step5的返回结果，每个景点名的搜索匹配数据（格式同step5返回值）
+        :return: 字典 - 景点名对齐结果，包含确认列表和候选列表，格式：
                  {
-                     "confirmed_item_names": ["确认商品名1", "确认商品名2"],  # 去重后的确认商品名，无则空列表
-                     "options": ["候选商品名1", "候选商品名2", ...]          # 去重后的候选商品名，无则空列表
+                     "confirmed_item_names": ["确认景点名1", "确认景点名2"],  # 去重后的确认景点名，无则空列表
+                     "options": ["候选景点名1", "候选景点名2", ...]          # 去重后的候选景点名，无则空列表
                  }
         """
-        #1 初始化商品列表
+        #1 初始化景点列表
         #确认
         confirmed_item_names:List[str]=[]
         #候选
@@ -258,7 +258,7 @@ class NodeItemNameConfirm(NodeBase):
                 for m in high:
                     confirmed_item_names.append(m.get("item_name"))
                 continue
-            # # a 如果只有一个匹配结果评分高于0.85  直接确认该商品名
+            # # a 如果只有一个匹配结果评分高于0.85  直接确认该景点名
             # if len(high)==1:
             #     confirmed_item_names.append(high[0].get("item_name"))
             #     continue
@@ -282,7 +282,7 @@ class NodeItemNameConfirm(NodeBase):
             if len(mid)>0:
                 for m in mid[:3]:
                     options.append(m.get("item_name"))
-            # d 如果没有0.65及以上的结果，不返回任何商品名称（确认和候选都为空）
+            # d 如果没有0.65及以上的结果，不返回任何景点名称（确认和候选都为空）
             #pass 不用写
 
         #去重
@@ -293,19 +293,19 @@ class NodeItemNameConfirm(NodeBase):
 
     def _step_7_check_confirmation(self, state, align_result, history):
         """
-        7 检查step6对齐后的商品名状态，分3种分支更新state，并同步更新历史消息的商品名关联
+        7 检查step6对齐后的景点名状态，分3种分支更新state，并同步更新历史消息的景点名关联
         :param state: 字典 - 原始会话状态，包含session_id/original_query等核心字段
         :param align_result: 字典 - step6的对齐结果
         :param history: 列表[字典] - 近期会话历史
         :return: 字典 - 更新后的会话状态，包含item_names/answer
         """
 
-        #1 从对齐结果中获取确认商品名列表  如果没有则返回空列表
+        #1 从对齐结果中获取确认景点名列表  如果没有则返回空列表
         confirmed=align_result.get("confirmed_item_names",[])
-        #2 从对齐的结果中获取候选商品列表，没有返回空列表
+        #2 从对齐的结果中获取候选景点列表，没有返回空列表
         options=align_result.get("options",[])
 
-        # **分支A（有确认商品）**：更新 State 中的 `item_names`，并批量回填历史消息中缺失的商品名关联。
+        # **分支A（有确认景点）**：更新 State 中的 `item_names`，并批量回填历史消息中缺失的景点名关联。
         if confirmed:
 
             # 获取历史记录的id列表
@@ -327,13 +327,13 @@ class NodeItemNameConfirm(NodeBase):
         # **分支B（有候选选项）**：生成澄清反问句（如“您是指...吗？”），写入 State 的 `answer` 字段，清空 `item_names`。
         if options:
             options_str = "，".join(options)
-            state["answer"] = f"您是想问以下哪个产品：{options_str}？请明确一下具体的产品型号和名称。"
+            state["answer"] = f"您是想问以下哪个景点：{options_str}？请明确一下具体的景点名称。"
             state["item_names"] = []
 
             return state
 
         # **分支C（无结果）**：生成拒识回复（如“未找到相关产品...”），写入 State 的 `answer` 字段。
-        state["answer"] = "未找到相关产品，请提供准确的商品品牌、型号和名称。"
+        state["answer"] = "未找到相关景点，请提供准确的河南旅游景点名称。"
         state["item_names"] = []
         return state
 
@@ -341,7 +341,7 @@ class NodeItemNameConfirm(NodeBase):
 
     def _step_8_write_history(self, state, session_id, rewritten_query, message_id):
         """
-         8 把本次处理的核心信息（用户问题、助手答案、商品名、改写查询）写入MongoDB的会话历史
+         8 把本次处理的核心信息（用户问题、助手答案、景点名、改写查询）写入MongoDB的会话历史
          包含2个核心操作：1. 写入助手答案（若有）；2. 更新用户原始问题的关联信息
          :param state: 字典 - step6更新后的会话状态，包含answer/item_names等字段
          :param session_id: 字符串 - 会话唯一标识
@@ -372,7 +372,7 @@ if __name__ == '__main__':
     #初始化
     init_state={
         "session_id":"test_session_003",
-        "original_query":"BrotherHAK180烫金机如何调节温度？"
+        "original_query":"河南博物院怎么预约参观？"
     }
     noid_item_name_confirm=NodeItemNameConfirm()
 

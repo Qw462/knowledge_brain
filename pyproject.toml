@@ -1,7 +1,7 @@
 [project]
-name = "knowledge-brain"
+name = "henan-travel-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "基于 RAG 的河南旅游智能问答系统（LangGraph 编排 + Milvus 混合检索）"
 requires-python = ">=3.11"
 dependencies = [
     "colorlog",

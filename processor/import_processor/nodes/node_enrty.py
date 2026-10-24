@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     #初始化图状态
     init_state={
-        "import_file_path":r"E:\BaiduNetdiskDownload\项目文件\2.资料\04-设备手册汇总\doc\hak180产品安全手册.pdf"
+        "import_file_path":r"D:\旅游数据集\tourism_docs\河南博物院.md"
     }
 
     #创建节点对象

@@ -25,8 +25,8 @@ from utils.task_utils import add_running_task, add_done_task, update_task_status
 # 1. 创建应用
 # 标题和描述会在Swagger文档中展示
 app = FastAPI(
-    title="掌柜智库-导入API",
-    description="此文档是掌柜智库导入流程的API接口说明"
+    title="河南旅游-导入API",
+    description="此文档是河南旅游导入流程的API接口说明"
 )
 
 # 2. 跨域

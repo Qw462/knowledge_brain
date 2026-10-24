@@ -44,6 +44,8 @@ class NodeMDImg(BaseNode):
         """
         #步骤1 ：初始化数据，获取md的核心信息
         md_content,md_path_obj,images_dir=self._step_1_get_content(state)
+        #读取后立即写入state：保证即使下方跳过图片处理，下游node_document_split也能拿到md_content
+        state["md_content"]=md_content
         if not images_dir.exists():
             self.logger.info("无图片文件夹跳过图片处理")
             return state
@@ -414,7 +416,7 @@ class NodeMDImg(BaseNode):
 if __name__ == "__main__":
     setup_logging()
 
-    md_path = r"D:\项目\output\hak180产品安全手册\hak180产品安全手册.md"
+    md_path = r"D:\旅游数据集\tourism_docs\河南博物院.md"
     with open(md_path, "r", encoding="utf-8") as f:
         md_content = f.read()
 

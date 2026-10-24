@@ -10,15 +10,15 @@ from utils.reranker_http_utils import rerank_documents
 # -----------------------------
 # Rerank / TopK 全局常量
 # -----------------------------
-# 动态 TopK 硬上限：最多取前 N 条（<=10）
-RERANK_MAX_TOPK: int = 8
+# 动态 TopK 硬上限：最多取前 N 条（旅游场景：5 条足够，避免噪声）
+RERANK_MAX_TOPK: int = 5
 # 最小 TopK：至少保留前 N 条（>=1，且 <= RERANK_MAX_TOPK）
 RERANK_MIN_TOPK: int = 2 #总数最少条数
 
 # 断崖阈值（绝对，判断高分文档）
-RERANK_GAP_ABS: float = 0.3
+RERANK_GAP_ABS: float = 0.25
 # 断崖阈值（相对，判断低分文档）
-RERANK_GAP_RATIO: float = 0.25
+RERANK_GAP_RATIO: float = 0.2
 
 
 class NodeRerank(NodeBase):
@@ -146,24 +146,24 @@ class NodeRerank(NodeBase):
 
 if __name__ == "__main__":
     mock_state = {
-        "rewritten_query": "怎么测这块主板的短路问题？",
+        "rewritten_query": "河南博物院门票多少钱？需要预约吗？",
         "rrf_chunks": [
             {
                 "chunk_id": "local_1",
-                "item_name": "主板维修手册",
-                "content": "主板短路通常表现为通电后风扇转一下就停，可以使用万用表的蜂鸣档测量。"
+                "item_name": "河南博物院",
+                "content": "河南博物院实行免费开放，观众需提前在官方微信公众号实名预约，凭身份证入馆。"
             },
             {
                 "chunk_id": "local_2",
                 "item_name": "闲聊",
-                "content": "今天中午去吃猪脚饭吧，这块主板外观很漂亮。"
+                "content": "今天中午去吃烩面吧，河南博物院的建筑很漂亮。"
             },
         ],
         "web_search_docs": [
             {
-                "url": "https://example.com/repair",
-                "title": "短路查修指南",
-                "snippet": "主板通电前先打各主供电电感对地阻值，阻值偏低就是短路。"
+                "url": "https://example.com/henan-museum",
+                "title": "河南博物院参观预约指南",
+                "snippet": "参观河南博物院需提前1-3天在官方平台预约，免费不免票。"
             },
             {
                 "url": "https://example.com/news",

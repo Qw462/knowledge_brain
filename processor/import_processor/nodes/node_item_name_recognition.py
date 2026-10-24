@@ -27,13 +27,13 @@ class NodeItemNameRecognition(BaseNode):
 
     def process(self, state: ImportGraphState):
         """
-                LangGraph 核心节点：商品主体名称识别
+                LangGraph 核心节点：景点主体名称识别
                 流程总览：
                     1. 提取输入
                     2. 构建大模型上下文
-                    3. 调用大模型识别商品名称
-                    4. 回填商品名称到状态和切片
-                    5. 生成商品名称的稠密/稀疏向量
+                    3. 调用大模型识别景点名称
+                    4. 回填景点名称到状态和切片
+                    5. 生成景点名称的稠密/稀疏向量
                     6. 将数据存入Milvus向量数据库
 
                 必要参数：task_id、file_title, chunks
@@ -48,13 +48,13 @@ class NodeItemNameRecognition(BaseNode):
         #步骤2 构建大模型识别的上下文
         context=self._step_2_build_context(chunks)
 
-        #步骤3 调用大模型识别商品名称
+        #步骤3 调用大模型识别景点名称
         item_name = self._step_3_call_llm(file_title, context)
 
-        #步骤4 回填商品名称到状态和切片
+        #步骤4 回填景点名称到状态和切片
         self._step_4_updata_chunks(state,chunks,item_name)
 
-        #步骤5 为商品名称生成稠密和稀疏向量
+        #步骤5 为景点名称生成稠密和稀疏向量
         dense_vector,sparse_vector=self._step_5_generate_vector(item_name)
 
         #步骤6 将数据存入Milvus向量数据库中
@@ -89,7 +89,7 @@ class NodeItemNameRecognition(BaseNode):
 
     def _step_2_build_context(self,chunks:List[Dict])->str:
         """
-                步骤 2: 构造大模型商品名称识别的标准化上下文
+                步骤 2: 构造大模型景点名称识别的标准化上下文
                 核心作用：
                     1. 限制切片数量：仅取前k个切片，避免上下文过长
                     2. 限制字符长度：总上下文字符限制，适配大模型输入上限
@@ -126,7 +126,7 @@ class NodeItemNameRecognition(BaseNode):
 
     def _step_3_call_llm(self,file_title:str,context:str)->str:
         """
-                步骤 3: 调用大模型实现商品名称/型号精准识别
+                步骤 3: 调用大模型实现景点名称精准识别
                 核心逻辑：
                     1. 上下文为空 → 直接返回file_title（兜底，无需调用大模型）
                     2. 上下文非空 → 加载标准化prompt模板，构建大模型对话消息
@@ -140,7 +140,7 @@ class NodeItemNameRecognition(BaseNode):
                     file_title: 处理后的文件标题（异常/空值时的兜底值）
                     context: 步骤2构建的结构化切片上下文（大模型识别的核心依据）
                 返回值：
-                    str: 清洗后的商品名称（异常/空值时返回原始file_title）
+                    str: 清洗后的景点名称（异常/空值时返回原始file_title）
         """
         #1 上下文为空，返回file_title:兜底处理
         if not context:
@@ -149,16 +149,16 @@ class NodeItemNameRecognition(BaseNode):
         try:
             #2.1 加载提示词模板
             prompt = f"""
-            请从以下信息中识别出商品名称与型号：
+            请从以下信息中识别出河南旅游景点/目的地的名称：
             文件名：{file_title}
 
             正文切片（用于辅助识别）：
             {context}
 
             要求：
-            1. 返回内容为字符串形式，最好是带品牌、型号和名称的完整商品名称。比如：苏伯尓5000W大功率电磁炉；
-            2. 返回结果应该只包含商品名称，不要添加任何解释或其他内容；
-            3. 如果无法识别商品名称,请返回空字符串。
+            1. 返回内容为字符串形式，最好是包含地区与名称的完整景点名称。比如：河南洛阳龙门石窟；
+            2. 返回结果应该只包含景点名称，不要添加任何解释或其他内容；
+            3. 如果无法识别景点名称,请返回空字符串。
             """
             #2.2 初始化大模型客户端
             llm=ChatOpenAI(
@@ -170,7 +170,7 @@ class NodeItemNameRecognition(BaseNode):
             )
             #2.3 创建消息对象
             messages=[
-                SystemMessage(content="你是一个专业的商品名称识别模型，请根据提供的信息，识别商品名称"),
+                SystemMessage(content="你是一个专业的河南旅游景点名称识别模型，请根据提供的信息，识别景点名称"),
                 HumanMessage(content=prompt)
             ]
             #2.4 模型调用
@@ -192,17 +192,17 @@ class NodeItemNameRecognition(BaseNode):
 
     def _step_4_updata_chunks(self,state: ImportGraphState,chunks:List[Dict[str,str]],item_name:str):
         """
-                步骤 4: 回填商品名称到流程状态和所有文本切片
+                步骤 4: 回填景点名称到流程状态和所有文本切片
                 核心作用：
                     1. 全局状态更新：将item_name存入state，供下游所有节点直接使用
                     2. 切片数据补全：为每个切片添加item_name字段，保证数据一致性
                     3. 状态同步：更新state中的chunks，确保切片修改全局生效
                 设计思路：
-                    所有切片关联同一商品名称，保证后续向量入库、检索时的维度一致性
+                    所有切片关联同一景点名称，保证后续向量入库、检索时的维度一致性
                 参数：
                     state: 流程状态对象
                     chunks: 校验后的文本切片列表
-                    item_name: 步骤3识别并清洗后的商品名称
+                    item_name: 步骤3识别并清洗后的景点名称
         """
         state["item_name"]=item_name
         for chunk in chunks:
@@ -211,14 +211,14 @@ class NodeItemNameRecognition(BaseNode):
 
     def _step_5_generate_vector(self,item_name:str)->Tuple[List,Dict]:
         """
-                步骤 5: 为商品名称生成 BGE-M3 稠密 + 稀疏双向量（Milvus 向量检索核心）
+                步骤 5: 为景点名称生成 BGE-M3 稠密 + 稀疏双向量（Milvus 向量检索核心）
                 核心说明：
                     - 稠密向量（dense_vector）：BGE-M3 固定 1024 维，记录文本深层语义信息
                     - 稀疏向量（sparse_vector）：变长键值对，记录文本关键词/特征位置信息
                 依赖工具：
                     generate_embeddings：封装 BGE-M3 模型，批量生成双向量，兼容单条/批量输入
                 参数：
-                    item_name: 步骤 3 识别的商品名称（非空，空值时直接返回空向量）
+                    item_name: 步骤 3 识别的景点名称（非空，空值时直接返回空向量）
                 返回值：
                     Tuple[List, Dict]: (稠密向量列表，稀疏向量字典)
         """
@@ -232,16 +232,15 @@ class NodeItemNameRecognition(BaseNode):
 
     def _step_6_save_to_milvus(self,state: ImportGraphState,file_title:str,item_name:str,dense_vector,sparse_vector):
         """
-                步骤 6: 将商品名称、文件标题、双向量持久化到 Milvus 向量数据库
+                步骤 6: 将景点名称、文件标题、双向量持久化到 Milvus 向量数据库
                 核心逻辑：
                     1. 客户端获取：获取单例 Milvus 客户端，连接失败则跳过
                     2. 集合初始化：无集合则创建（定义 Schema+索引），有集合则直接使用
-                    3. 幂等性处理：删除同名商品数据，避免重复存储
-                    4. 数据插入：构造符合 Schema 的数据，非空向量才添加
+                    3. 幂等性处理：删除同名景点数据，避免重复存储
                 参数：
                     state: 流程状态对象，用于最终状态同步
                     file_title: 处理后的文件标题
-                    item_name: 识别后的商品名称（主键去重依据）
+                    item_name: 识别后的景点名称（主键去重依据）
                     dense_vector: 步骤 5 生成的稠密向量（1024 维列表）
                     sparse_vector: 步骤 5 生成的稀疏向量（字典格式）
         """
@@ -258,7 +257,7 @@ class NodeItemNameRecognition(BaseNode):
             if not milvus_client.has_collection(collection_name):
                 self._create_item_name_collection(collection_name,milvus_client)
 
-            #3 幂等性处理：删除同名商品数据，避免重复存储
+            #3 幂等性处理：删除同名景点数据，避免重复存储
             file_title=escape_milvus_string(file_title)
             milvus_client.delete(collection_name=collection_name,filter=f"file_title=='{file_title}'")
 
@@ -351,17 +350,23 @@ class NodeItemNameRecognition(BaseNode):
 if __name__=="__main__":
     setup_logging()
 
-    json_path=r"D:\项目\output\hak180产品安全手册\chunks.json"
+    #读取node_document_split自测生成的chunks.json备份
+    json_path=r"D:\旅游数据集\tourism_docs\chunks.json"
     with open(json_path,"r",encoding="utf-8") as f:
         chunks_json=f.read()
     chunks=json.loads(chunks_json)
     int_state={
         "chunks":chunks,
-        "file_title":"hak180产品安全手册"
+        "file_title":"河南博物院"
     }
     #执行核心处理流程
     node_item_name_recognition = NodeItemNameRecognition()
     result=node_item_name_recognition(int_state)
+
+    #备份识别后的state（chunks已带item_name），供node_bge_embedding自测读取
+    state_backup_path=r"D:\旅游数据集\tourism_docs\state.json"
+    with open(state_backup_path,"w",encoding="utf-8") as f:
+        json.dump(result,f,ensure_ascii=False,indent=4)
 
     logging.getLogger().info(json.dumps(result,ensure_ascii=False,indent=4))
 

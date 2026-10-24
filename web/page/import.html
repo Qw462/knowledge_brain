@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件导入服务</title>
+    <title>河南旅游知识库·文件导入</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,7 +27,7 @@
             margin-bottom: 30px;
         }
         .upload-area {
-            border: 2px dashed #3498db;
+            border: 2px dashed #0e9f6e;
             border-radius: 8px;
             padding: 40px;
             text-align: center;
@@ -36,18 +36,18 @@
             margin-bottom: 20px;
         }
         .upload-area:hover {
-            background-color: #ecf6fd;
+            background-color: #e9f7f1;
         }
         .upload-icon {
             font-size: 48px;
-            color: #3498db;
+            color: #0e9f6e;
             margin-bottom: 10px;
         }
         .file-input {
             display: none;
         }
         .btn {
-            background-color: #3498db;
+            background-color: #0e9f6e;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -57,7 +57,7 @@
             transition: background-color 0.3s;
         }
         .btn:hover {
-            background-color: #2980b9;
+            background-color: #0b8159;
         }
         .btn:disabled {
             background-color: #bdc3c7;
@@ -101,7 +101,7 @@
             text-align: center;
         }
         .status-uploading { background-color: #f39c12; }
-        .status-processing { background-color: #3498db; }
+        .status-processing { background-color: #0e9f6e; }
         .status-completed { background-color: #2ecc71; }
         .status-error { background-color: #e74c3c; }
 
@@ -146,11 +146,11 @@
 <body>
 
 <div class="container">
-    <h1>📄 知识库文件导入</h1>
+    <h1>📄 河南旅游知识库文件导入</h1>
 
     <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <div class="upload-icon">☁️</div>
-        <p>点击或拖拽文件到此处 (PDF/MD)</p>
+        <p>点击或拖拽文件到此处 (PDF/MD)<br><small>支持河南旅游指南、景点介绍、游玩攻略等资料</small></p>
         <input type="file" id="fileInput" class="file-input" multiple accept=".pdf,.md">
     </div>
 
@@ -169,7 +169,7 @@
 
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.style.backgroundColor = '#ecf6fd';
+        dropZone.style.backgroundColor = '#e9f7f1';
     });
 
     dropZone.addEventListener('dragleave', (e) => {
@@ -194,7 +194,7 @@
     function updateProgressBar(bar, percentage) {
         bar.style.width = percentage + '%';
         if (percentage >= 100) {
-            bar.style.backgroundColor = '#3498db'; // 蓝色
+            bar.style.backgroundColor = '#0e9f6e'; // 绿色
         } else {
             bar.style.backgroundColor = '#f39c12'; // 橘红色
         }
