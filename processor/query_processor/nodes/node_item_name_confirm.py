@@ -18,6 +18,24 @@ from utils.milvus_utils import get_milvus_client, create_hybrid_search_requests,
 from utils.mongo_history_utils import get_recent_messages, save_chat_message, update_message_item_names
 
 
+def _char_overlap_ratio(a: str, b: str) -> float:
+    """
+    计算两个字符串的字符重叠率（基于字符集合的 Jaccard 相似度）
+    用于模糊匹配景点名称，处理"博物馆"vs"博物院"等一字之差的情况
+    :param a: 字符串1
+    :param b: 字符串2
+    :return: 重叠率 0.0~1.0
+    """
+    if not a or not b:
+        return 0.0
+    set_a, set_b = set(a), set(b)
+    intersection = set_a & set_b
+    union = set_a | set_b
+    if not union:
+        return 0.0
+    return len(intersection) / len(union)
+
+
 class NodeItemNameConfirm(NodeBase):
     name: str = "node_item_name_confirm"
 
@@ -222,74 +240,97 @@ class NodeItemNameConfirm(NodeBase):
 
     def _step_6_align_item_names(self, query_results) -> dict:
         """
-        6 根据Milvus搜索评分，逐个对齐step4提取的item_names，生成「确认景点名」和「候选景点名」以及 [没有可选景点]
-        对齐规则（优先级a>b>c>d）：
-                #a  如果只有一个匹配结果评分高于0.85 → 直接确认该景点名
-                #b  如果多条匹配结果评分超过0.85 → 优先取与原始提取名相同的，无则取分数最高的
-                优化ab 所有评分高于0.85的都直接确认
-                c  如果无0.85分以上结果 → 取分数≥0.6的最高前5个作为候选
-                d  如果无0.6分及以上结果 → 不返回任何景点名（确认+候选均为空）
-        :param query_results: 列表[字典] - step5的返回结果，每个景点名的搜索匹配数据（格式同step5返回值）
-        :return: 字典 - 景点名对齐结果，包含确认列表和候选列表，格式：
-                 {
-                     "confirmed_item_names": ["确认景点名1", "确认景点名2"],  # 去重后的确认景点名，无则空列表
-                     "options": ["候选景点名1", "候选景点名2", ...]          # 去重后的候选景点名，无则空列表
-                 }
+        6 根据Milvus搜索评分，逐个对齐step4提取的item_names，生成「确认景点名」和「候选景点名」
+        对齐规则（优先级 a > b > c > d）：
+            a  向量搜索评分 > 0.85 → 直接确认
+            b  无高分结果 → 模糊字符串匹配兜底（字符重叠率≥0.75 直接确认）
+            c  模糊匹配未命中 → 取评分≥0.65 的前3个作为候选
+            d  无0.65及以上结果 → 不返回任何景点名
         """
-        #1 初始化景点列表
-        #确认
-        confirmed_item_names:List[str]=[]
-        #候选
-        options:List[str]=[]
+        confirmed_item_names: List[str] = []
+        options: List[str] = []
+
+        # 获取数据库中所有景点名称，用于模糊匹配兜底
+        all_db_item_names = self._get_all_item_names()
+
         for res in query_results:
-            #提取上一步组装的信息
-            extract_name=res.get("extracted_name")
-            matches=res.get("matches")
-            #如果没有匹配的结果，则跳过对齐步骤
+            extract_name = res.get("extracted_name")
+            matches = res.get("matches")
             if not matches:
                 continue
 
-            #筛选高置信度等分的结果：>0.85
-            high=[m for m in matches if m.get("score") > 0.85]
-            mid=[m for m in matches if m.get("score") >= 0.65]
+            # 筛选高置信度结果：>0.85
+            high = [m for m in matches if m.get("score") > 0.85]
+            mid = [m for m in matches if m.get("score") >= 0.65]
 
-            # 优化ab所有评分高于0.85的都可以直接确认
-            if len(high)>0:
+            # a 向量搜索高分 → 直接确认
+            if len(high) > 0:
                 for m in high:
                     confirmed_item_names.append(m.get("item_name"))
                 continue
-            # # a 如果只有一个匹配结果评分高于0.85  直接确认该景点名
-            # if len(high)==1:
-            #     confirmed_item_names.append(high[0].get("item_name"))
-            #     continue
-            #
-            #
-            # #b 如果多条匹配结果超过0.85  优先选取与原始提取名相同的，无，则去分数最高的
-            # if len(high)>1:
-            #     picked=None
-            #     if extract_name:
-            #         #优先选取与提取名相同的
-            #         for m in high:
-            #             if m.get("item_name")==extract_name:
-            #                 picked=m
-            #                 break
-            #     if not picked:
-            #         #没有则取分数最高的
-            #         picked=high[0]
-            #     confirmed_item_names.append(picked.get("item_name"))
-            #     continue
-            # c 如果没有大于0.85的结果，取分数大于0.65 的最高的前三个作为候选
-            if len(mid)>0:
+
+            # b 模糊字符串匹配兜底：字符重叠率≥0.75 直接确认
+            fuzzy_matched = self._fuzzy_match_item(extract_name, all_db_item_names, min_ratio=0.75)
+            if fuzzy_matched:
+                logger.info(f"模糊匹配兜底命中：'{extract_name}' → '{fuzzy_matched}'")
+                confirmed_item_names.append(fuzzy_matched)
+                continue
+
+            # c 无高分且模糊匹配未命中 → 取前3个候选
+            if len(mid) > 0:
                 for m in mid[:3]:
                     options.append(m.get("item_name"))
-            # d 如果没有0.65及以上的结果，不返回任何景点名称（确认和候选都为空）
-            #pass 不用写
 
-        #去重
         return {
-            "confirmed_item_names":list(set(confirmed_item_names)),
-            "options":list(set(options))
+            "confirmed_item_names": list(set(confirmed_item_names)),
+            "options": list(set(options))
         }
+
+    def _fuzzy_match_item(self, query_name: str, db_item_names: List[str], min_ratio: float = 0.75) -> str:
+        """
+        模糊字符串匹配：在数据库景点名列表中找到与查询名称字符重叠率最高的项
+        处理"河南博物馆"vs"河南博物院"、"少林寺"vs"嵩山少林寺"等情况
+        :param query_name: 用户提取的景点名
+        :param db_item_names: 数据库中所有景点名列表
+        :param min_ratio: 最低重叠率阈值，默认0.75
+        :return: 匹配到的景点名，无则返回空字符串
+        """
+        if not query_name or not db_item_names:
+            return ""
+        best_match = ""
+        best_ratio = 0.0
+        for db_name in db_item_names:
+            ratio = _char_overlap_ratio(query_name, db_name)
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_match = db_name
+        if best_ratio >= min_ratio:
+            return best_match
+        return ""
+
+    def _get_all_item_names(self) -> List[str]:
+        """
+        从Milvus数据库中获取所有景点名称，用于模糊匹配兜底
+        :return: 景点名称列表
+        """
+        try:
+            milvus_client = get_milvus_client()
+            if not milvus_client:
+                logger.warning("milvus客户端获取失败，无法获取全量景点名")
+                return []
+            collection_name = milvus_config.item_name_collection
+            res = milvus_client.query(
+                collection_name=collection_name,
+                output_fields=["item_name"],
+                limit=10000
+            )
+            if res:
+                names = [item.get("item_name", "") for item in res if item.get("item_name")]
+                logger.info(f"从Milvus获取到{len(names)}个景点名称用于模糊匹配")
+                return names
+        except Exception as e:
+            logger.warning(f"获取全量景点名失败：{e}")
+        return []
 
     def _step_7_check_confirmation(self, state, align_result, history):
         """

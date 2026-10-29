@@ -11,7 +11,7 @@ from processor.query_processor.state import QueryGraphState
 from utils.llm_utils import get_llm_client
 from utils.mongo_history_utils import save_chat_message
 from utils.sse_utils import push_to_session, SSEEvent
-from utils.task_utils import set_task_result, add_done_task
+from utils.task_utils import set_task_result, add_done_task, update_task_status, TASK_STATUS_COMPLETED
 
 MAX_CONTEXT_CHARS = 12000
 
@@ -61,6 +61,11 @@ class NodeAnswerOutput(NodeBase):
             self._step_4_write_history(state, image_urls=image_urls)
 
         add_done_task(state['session_id'], self.name, state.get("is_stream"))
+
+        # 在发送 final 事件之前先更新任务状态为 completed
+        # 否则 final 事件会关闭 EventSource，导致后续的 progress(completed) 事件无法被前端接收
+        if state.get("is_stream"):
+            update_task_status(state['session_id'], TASK_STATUS_COMPLETED, push_queue=True)
 
         # 阶段六: 流式输出结束，发送 final 事件 [最后兜底，确保图片都能争取渲染和结束]
         logger.info(f"---发送 final 事件---图片为：{image_urls}")
