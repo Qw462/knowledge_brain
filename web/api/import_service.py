@@ -100,7 +100,7 @@ async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile
     文件上传核心接口
     1. 接收前端上传的多文件（PDF/MD为主）
     2. 按「日期/任务ID」分层保存到本地输出目录，避免文件冲突
-    3. 将文件上传至MinIO对象存储，做持久化保存
+    3. 将文件上传至MinIO对象存储， 做持久化保存
     4. 为每个文件生成唯一TaskID，启动独立的LangGraph后台处理任务
     5. 实时更新任务状态，供前端轮询监控进度
 
