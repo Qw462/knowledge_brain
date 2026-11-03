@@ -7,7 +7,7 @@ _bge_m3_ef = None
 
 def get_bge_m3_ef():
     """
-    获取全局单例的BGEM3EmbeddingFunction对象
+    获取全局单例的 BGEM3EmbeddingFunction对象
     :return:  BGEM3EmbeddingFunction对象
     """
     global _bge_m3_ef
