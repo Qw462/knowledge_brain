@@ -89,7 +89,7 @@ def step_2_run_rag_pipeline(test_df: pd.DataFrame) -> pd.DataFrame:
 
         answers.append(answer)
         # 从 reranked_docs 字典列表中提取 content 字段，转为字符串列表
-        # 每个 doc 结构为：{chunk_id, title, content, url, source, score}
+        # 每个  doc 结构为：{chunk_id, title, content, url, source, score}
         context_texts = [doc.get("content", "") for doc in reranked_docs] if reranked_docs else [""]
         contexts_list.append(context_texts)
 
